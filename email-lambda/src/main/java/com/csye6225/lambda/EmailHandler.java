@@ -1,12 +1,17 @@
 package com.csye6225.lambda;
 
+import java.util.Iterator;
 import java.util.UUID;
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.document.Item;
+import com.amazonaws.services.dynamodbv2.document.ItemCollection;
+import com.amazonaws.services.dynamodbv2.document.QueryOutcome;
 import com.amazonaws.services.dynamodbv2.document.Table;
+import com.amazonaws.services.dynamodbv2.document.spec.QuerySpec;
+import com.amazonaws.services.dynamodbv2.document.utils.ValueMap;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.simpleemail.AmazonSimpleEmailService;
@@ -22,7 +27,7 @@ public class EmailHandler implements RequestHandler<String, String> {
 
 	static final String CONFIGSET = "ConfigSet";
 
-	static final String SUBJECT = "Password reset for CSYE6225-SPRING2019-dandekars.me";
+	static final String SUBJECT = "Password reset for CSYE6225-SPRING2019-webapp";
 
 	static final String TEXTBODY = "This email was sent through Amazon SES " + "using the AWS SDK for Java.";
 
@@ -32,30 +37,34 @@ public class EmailHandler implements RequestHandler<String, String> {
 		DynamoDB dynamoDb = new DynamoDB(dbclient);
 
 		Table table = dynamoDb.getTable("csye6225");
-
-		Item item = table.getItem("email", input);
-
-		if (null != item) {
+		QuerySpec spec = new QuerySpec().withKeyConditionExpression("email = :v_email")
+				.withFilterExpression("expiration > :v_exp").withValueMap(new ValueMap().withString(":v_email", input)
+						.withNumber(":v_exp", System.currentTimeMillis() / 1000L));
+		ItemCollection<QueryOutcome> items = table.query(spec);
+		Iterator<Item> iterator = items.iterator();
+		System.out.println("before while");
+		Item item = null;
+		if (iterator.hasNext()) {
+			item = iterator.next();
 			token = item.getString("token");
 		} else {
 			token = UUID.randomUUID().toString();
-			item = new Item().withPrimaryKey("email", input).withString("token", token);
+			item = new Item().withPrimaryKey("email", input).withString("token", token).withNumber("expiration",
+					(System.currentTimeMillis() + (2 * 60 * 1000)) / 1000L);
 			table.putItem(item);
+			String htmlBody = "Click on the following link to reset your password <br /> "
+					+ "<a href = '#'>http://csye6225-spring2019-" + System.getenv("AWS_DOMAIN_NAME")
+					+ ".me/reset?email=" + input + "&token=" + token + "</a>";
+
+			AmazonSimpleEmailService emailClient = AmazonSimpleEmailServiceClientBuilder.defaultClient();
+			SendEmailRequest request = new SendEmailRequest().withDestination(new Destination().withToAddresses(input))
+					.withMessage(new Message()
+							.withBody(new Body().withHtml(new Content().withCharset("UTF-8").withData(htmlBody))
+									.withText(new Content().withCharset("UTF-8").withData(TEXTBODY)))
+							.withSubject(new Content().withCharset("UTF-8").withData(SUBJECT)))
+					.withSource(FROM);
+			emailClient.sendEmail(request);
 		}
-
-		String htmlBody = "Click on the following link to reset your password <br /> "
-				+ "<a href = '#'>http://csye6225-spring2019-dandekars.me/reset?email=" + input + "&token=" + token
-				+ "</a>";
-
-		context.getLogger().log("Input: " + input);
-		AmazonSimpleEmailService emailClient = AmazonSimpleEmailServiceClientBuilder.defaultClient();
-		SendEmailRequest request = new SendEmailRequest().withDestination(new Destination().withToAddresses(input))
-				.withMessage(new Message()
-						.withBody(new Body().withHtml(new Content().withCharset("UTF-8").withData(htmlBody))
-								.withText(new Content().withCharset("UTF-8").withData(TEXTBODY)))
-						.withSubject(new Content().withCharset("UTF-8").withData(SUBJECT)))
-				.withSource(FROM);
-		emailClient.sendEmail(request);
 		return token;
 	}
 
