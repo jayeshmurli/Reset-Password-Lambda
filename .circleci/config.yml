@@ -27,7 +27,6 @@ jobs:
           command: |
             sudo apt-get -y -qq install awscli
             aws --version
-
       - run:
           name: Build JAR
           command: |
@@ -44,8 +43,6 @@ jobs:
           command: |
             cd email-lambda/target
             pwd  
-
           name: Update Lambda function
           command: |
             aws lambda update-function-code --function-name=password_reset --zip-file=fileb://email-lambda/target/email-lambda.zip
-
