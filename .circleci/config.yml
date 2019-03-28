@@ -3,8 +3,8 @@
 # Check https://circleci.com/docs/2.0/language-java/ for more details
 #
 #
-version: 2.1
 
+version: 2
 jobs:
   build:
     docker:
@@ -15,11 +15,13 @@ jobs:
     #   MAVEN_OPTS: -Xmx3200m
     steps:
       - checkout
+
       # - run:
       #     name: Install AWS CLI
       #     command: |
       #       sudo apt-get -y -qq install awscli
       #       aws --version
+
       - run:
           name: Install AWS CLI
           command: |
@@ -42,8 +44,7 @@ jobs:
           command: |
             cd email-lambda/target
             pwd  
-
+      - run:
           name: Update Lambda function
           command: |
             aws lambda update-function-code --function-name=password_reset --zip-file=fileb://email-lambda/target/email-lambda.zip
-
