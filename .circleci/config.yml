@@ -4,6 +4,7 @@
 #
 #
 version: 2
+
 jobs:
   build:
     docker:
@@ -14,11 +15,17 @@ jobs:
     #   MAVEN_OPTS: -Xmx3200m
     steps:
       - checkout
+      # - run:
+      #     name: Install AWS CLI
+      #     command: |
+      #       sudo apt-get -y -qq install awscli
+      #       aws --version
       - run:
           name: Install AWS CLI
           command: |
             sudo apt-get -y -qq install awscli
             aws --version
+
       - run:
           name: Build JAR
           command: |
@@ -30,6 +37,13 @@ jobs:
             cd email-lambda/target
             cp email-lambda.jar email-lambda.zip
       - run:
+
+          name: Check if renamed
+          command: |
+            cd email-lambda/target
+            pwd  
+
           name: Update Lambda function
           command: |
-            aws lambda update-function-code --function-name=testLambdaFunction --zip-file=fileb://email-lambda/target/email-lambda.zip
+            aws lambda update-function-code --function-name=password_reset --zip-file=fileb://email-lambda/target/email-lambda.zip
+
