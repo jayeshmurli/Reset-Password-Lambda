@@ -56,7 +56,7 @@ public class EmailHandler implements RequestHandler<Map<String, Object>, String>
 		} else {
 			token = UUID.randomUUID().toString();
 			item = new Item().withPrimaryKey("email", input).withString("token", token).withNumber("expiration",
-					(System.currentTimeMillis() + (2 * 60 * 1000)) / 1000L);
+					(System.currentTimeMillis() + (20 * 60 * 1000)) / 1000L);
 			table.putItem(item);
 			String htmlBody = "Click on the following link to reset your password <br /> "
 					+ "<a href = '#'>http://csye6225-spring2019-" + System.getenv("AWS_DOMAIN_NAME")
