@@ -1,6 +1,8 @@
 package com.csye6225.lambda;
 
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
@@ -22,7 +24,7 @@ import com.amazonaws.services.simpleemail.model.Destination;
 import com.amazonaws.services.simpleemail.model.Message;
 import com.amazonaws.services.simpleemail.model.SendEmailRequest;
 
-public class EmailHandler implements RequestHandler<String, String> {
+public class EmailHandler implements RequestHandler<Map<String, Object>, String> {
 	static final String FROM = "no-reply@csye6225-spring2019-" + System.getenv("AWS_DOMAIN_NAME") + ".me";
 
 	static final String CONFIGSET = "ConfigSet";
@@ -31,8 +33,12 @@ public class EmailHandler implements RequestHandler<String, String> {
 
 	static final String TEXTBODY = "This email was sent through Amazon SES " + "using the AWS SDK for Java.";
 
-	public String handleRequest(String input, Context context) {
-		String token;
+	public String handleRequest(Map<String, Object> inputMap, Context context) {
+		String token = "Hello";
+		List<Object> records = (List<Object>) inputMap.get("Records");
+		Map<Object, Object> objMap = (Map<Object, Object>) records.get(0);
+		Map<Object, Object> sns = (Map<Object, Object>) objMap.get("Sns");
+		String input = (String) sns.get("Message");
 		AmazonDynamoDB dbclient = AmazonDynamoDBClientBuilder.defaultClient();
 		DynamoDB dynamoDb = new DynamoDB(dbclient);
 
@@ -65,6 +71,7 @@ public class EmailHandler implements RequestHandler<String, String> {
 					.withSource(FROM);
 			emailClient.sendEmail(request);
 		}
+		System.out.println(input);
 		return token;
 	}
 
